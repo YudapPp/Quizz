@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduQuiz - Platform Quiz Interaktif</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4cc9f0;
+            --danger: #ef233c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: none;
+        }
+
+        .card.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+            outline: none;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn-accent {
+            background: linear-gradient(to right, var(--accent), #b5179e);
+        }
+
+        .btn-danger {
+            background: linear-gradient(to right, var(--danger), #d00000);
+        }
+
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+
+        .avatar-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .avatar-option {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.3s;
+            object-fit: cover;
+        }
+
+        .avatar-option:hover, .avatar-option.selected {
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .room-code {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--primary);
+        }
+
+        .participants {
+            margin-top: 30px;
+        }
+
+        .participant {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+
+        .participant-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 15px;
+            object-fit: cover;
+        }
+
+        .quiz-container {
+            text-align: center;
+        }
+
+        .question {
+            font-size: 22px;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .option {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .option:hover {
+            background: #e9ecef;
+        }
+
+        .option.selected {
+            background: var(--primary);
+            color: white;
+        }
+
+        .quiz-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error-message {
+            color: var(--danger);
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        .question-form {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px dashed #ccc;
+            border-radius: 8px;
+        }
+
+        .add-question-btn {
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .options {
+                grid-template-columns: 1fr;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+</head>
+<body>
+    <div class="container">
+        <!-- Card 1: Pilih Peran -->
+        <div class="card active" id="roleCard">
+            <div class="card-header">
+                <h1>Selamat Datang di EduQuiz!</h1>
+            </div>
+            <div class="card-body">
+                <h2 style="text-align: center; margin-bottom: 30px;">Pilih Peran Anda</h2>
+                <button class="btn btn-block" onclick="showCard('hostCard')">Buat Room Baru (Host)</button>
+                <div style="text-align: center; margin: 20px 0; color: #6c757d;">ATAU</div>
+                <button class="btn btn-block" onclick="showCard('joinCard')">Gabung Room (Peserta)</button>
+            </div>
+        </div>
+
+        <!-- Card 2: Buat Room -->
+        <div class="card" id="hostCard">
+            <div class="card-header">
+                <button class="back-btn" onclick="showCard('roleCard')">
+                    <span class="material-symbols-outlined">arrow_back</span> Kembali
+                </button>
+                <h1>Buat Room Quiz Baru</h1>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="hostName">Nama Anda</label>
+                    <input type="text" id="hostName" placeholder="Masukkan nama Anda">
+                    <div class="error-message" id="hostNameError"></div>
+                </div>
+                <div class="form-group">
+                    <label>Pilih Avatar</label>
+                    <div class="avatar-options">
+                        <img src="https://i.pravatar.cc/150?img=1" class="avatar-option" onclick="selectAvatar(this, 'host')">
+                        <img src="https://i.pravatar.cc/150?img=2" class="avatar-option" onclick="selectAvatar(this, 'host')">
+                        <img src="https://i.pravatar.cc/150?img=3" class="avatar-option" onclick="selectAvatar(this, 'host')">
+                        <img src="https://i.pravatar.cc/150?img=4" class="avatar-option" onclick="selectAvatar(this, 'host')">
+                        <img src="https://i.pravatar.cc/150?img=5" class="avatar-option" onclick="selectAvatar(this, 'host')">
+                    </div>
+                    <div class="error-message" id="hostAvatarError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="roomTopic">Topik Quiz (Opsional)</label>
+                    <input type="text" id="roomTopic" placeholder="Contoh: Matematika Dasar">
+                </div>
+                <button class="btn btn-block" onclick="createRoom()">Buat Room</button>
+            </div>
+        </div>
+
+        <!-- Card 3: Gabung Room -->
+        <div class="card" id="joinCard">
+            <div class="card-header">
+                <button class="back-btn" onclick="showCard('roleCard')">
+                    <span class="material-symbols-outlined">arrow_back</span> Kembali
+                </button>
+                <h1>Gabung Room Quiz</h1>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="roomCode">Kode Room</label>
+                    <input type="text" id="roomCode" placeholder="Masukkan kode room" maxlength="6">
+                    <div class="error-message" id="roomCodeError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="participantName">Nama Anda</label>
+                    <input type="text" id="participantName" placeholder="Masukkan nama Anda">
+                    <div class="error-message" id="participantNameError"></div>
+                </div>
+                <div class="form-group">
+                    <label>Pilih Avatar</label>
+                    <div class="avatar-options">
+                        <img src="https://i.pravatar.cc/150?img=6" class="avatar-option" onclick="selectAvatar(this, 'participant')">
+                        <img src="https://i.pravatar.cc/150?img=7" class="avatar-option" onclick="selectAvatar(this, 'participant')">
+                        <img src="https://i.pravatar.cc/150?img=8" class="avatar-option" onclick="selectAvatar(this, 'participant')">
+                        <img src="https://i.pravatar.cc/150?img=9" class="avatar-option" onclick="selectAvatar(this, 'participant')">
+                        <img src="https://i.pravatar.cc/150?img=10" class="avatar-option" onclick="selectAvatar(this, 'participant')">
+                    </div>
+                    <div class="error-message" id="participantAvatarError"></div>
+                </div>
+                <button class="btn btn-block" onclick="joinRoom()">Gabung Room</button>
+            </div>
+        </div>
+
+        <!-- Card 4: Lobby Room (Host) -->
+        <div class="card" id="hostLobbyCard">
+            <div class="card-header">
+                <button class="back-btn" onclick="exitRoom()">
+                    <span class="material-symbols-outlined">arrow_back</span> Keluar
+                </button>
+                <h1>Room Anda</h1>
+            </div>
+            <div class="card-body">
+                <div class="room-code" id="hostRoomCodeDisplay">KODE</div>
+                <p style="text-align: center;" id="hostRoomTopicDisplay">Topik: <span id="roomTopicText"></span></p>
+                <p style="text-align: center;">Bagikan kode ini ke peserta</p>
+                
+                <div class="participants" id="participantsList">
+                    <!-- Daftar peserta akan muncul di sini -->
+                </div>
+                
+                <div id="questionSetupSection">
+                    <h3 style="margin: 20px 0 10px;">Buat Pertanyaan</h3>
+                    <div id="questionFormsContainer">
+                        <!-- Form pertanyaan akan muncul di sini -->
+                    </div>
+                    <button class="btn add-question-btn" onclick="addQuestionForm()">
+                        <span class="material-symbols-outlined">add</span> Tambah Pertanyaan
+                    </button>
+                </div>
+                
+                <button class="btn btn-accent btn-block" id="startQuizBtn" onclick="startQuiz()">Mulai Quiz</button>
+            </div>
+        </div>
+
+        <!-- Card 5: Lobby Room (Peserta) -->
+        <div class="card" id="participantLobbyCard">
+            <div class="card-header">
+                <button class="back-btn" onclick="exitRoom()">
+                    <span class="material-symbols-outlined">arrow_back</span> Keluar
+                </button>
+                <h1>Menunggu Host Memulai Quiz</h1>
+            </div>
+            <div class="card-body">
+                <div class="room-code" id="participantRoomCodeDisplay">KODE</div>
+                <p style="text-align: center;">Topik: <span id="participantRoomTopic"></span></p>
+                
+                <div class="participants" id="participantViewList">
+                    <!-- Daftar peserta akan muncul di sini -->
+                </div>
+                
+                <div id="waitingMessage">
+                    <p style="text-align: center; margin-top: 20px;">Menunggu host memulai quiz...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 6: Quiz Screen -->
+        <div class="card" id="quizCard">
+            <div class="card-header">
+                <h1 id="quizTitle">EduQuiz</h1>
+            </div>
+            <div class="card-body">
+                <div class="quiz-container">
+                    <div class="question" id="questionText">Pertanyaan akan muncul di sini</div>
+                    <div class="options" id="optionsContainer">
+                        <!-- Opsi jawaban akan muncul di sini -->
+                    </div>
+                    <div class="quiz-controls">
+                        <button class="btn" id="prevQuestionBtn" onclick="prevQuestion()">
+                            <span class="material-symbols-outlined">arrow_back</span> Sebelumnya
+                        </button>
+                        <span id="questionCounter">1/10</span>
+                        <button class="btn" id="nextQuestionBtn" onclick="nextQuestion()">
+                            Selanjutnya <span class="material-symbols-outlined">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data aplikasi
+        const appData = {
+            role: null, // 'host' atau 'participant'
+            roomCode: null,
+            user: {
+                name: '',
+                avatar: ''
+            },
+            roomTopic: '',
+            participants: [],
+            rooms: {}, // Untuk menyimpan data room yang aktif
+            currentRoom: null,
+            quiz: {
+                currentQuestion: 0,
+                questions: []
+            }
+        };
+
+        // Inisialisasi
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLoginStatus();
+            initializeSampleRooms(); // Untuk testing saja
+        });
+
+        // Untuk simulasi (bisa dihapus di production)
+        function initializeSampleRooms() {
+            appData.rooms = {
+                'ABC123': {
+                    code: 'ABC123',
+                    host: {
+                        name: 'Host Contoh',
+                        avatar: 'https://i.pravatar.cc/150?img=1'
+                    },
+                    topic: 'Matematika Dasar',
+                    participants: [],
+                    questions: [
+                        {
+                            question: "Berapa hasil dari 7 x 8?",
+                            options: ["48", "56", "64", "72"],
+                            answer: 1
+                        },
+                        {
+                            question: "Apa ibukota Indonesia?",
+                            options: ["Jakarta", "Bandung", "Surabaya", "Medan"],
+                            answer: 0
+                        }
+                    ],
+                    isActive: true
+                }
+            };
+        }
+
+        // Cek status login dari localStorage
+        function checkLoginStatus() {
+            const savedData = localStorage.getItem('eduQuizData');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                
+                if (data.role === 'host' && data.roomCode && appData.rooms[data.roomCode]) {
+                    joinAsHost(data.roomCode, data.user);
+                } else if (data.role === 'participant' && data.roomCode && appData.rooms[data.roomCode]) {
+                    joinAsParticipant(data.roomCode, data.user);
+                } else {
+                    showCard('roleCard');
+                }
+            } else {
+                showCard('roleCard');
+            }
+        }
+
+        // Tampilkan card tertentu
+        function showCard(cardId) {
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.getElementById(cardId).classList.add('active');
+        }
+
+        // Pilih avatar
+        function selectAvatar(element, role) {
+            // Hapus seleksi sebelumnya
+            document.querySelectorAll(`.avatar-option[data-role="${role}"]`).forEach(avatar => {
+                avatar.classList.remove('selected');
+            });
+            
+            // Tambahkan seleksi baru
+            element.classList.add('selected');
+            element.setAttribute('data-role', role);
+        }
+
+        // Buat room baru
+        function createRoom() {
+            // Validasi input
+            const name = document.getElementById('hostName').value.trim();
+            const avatarElement = document.querySelector('.avatar-option.selected[data-role="host"]');
+            const topic = document.getElementById('roomTopic').value.trim();
+            
+            // Reset error messages
+            document.getElementById('hostNameError').textContent = '';
+            document.getElementById('hostAvatarError').textContent = '';
+            
+            let isValid = true;
+            
+            if (!name) {
+                document.getElementById('hostNameError').textContent = 'Nama harus diisi';
+                isValid = false;
+            }
+            
+            if (!avatarElement) {
+                document.getElementById('hostAvatarError').textContent = 'Pilih avatar terlebih dahulu';
+                isValid = false;
+            }
+            
+            if (!isValid) return;
+            
+            const avatar = avatarElement.src;
+            
+            // Generate kode room acak
+            const roomCode = generateRoomCode();
+            
+            // Buat room baru
+            appData.rooms[roomCode] = {
+                code: roomCode,
+                host: { name, avatar },
+                topic: topic || 'Quiz Edukasi',
+                participants: [],
+                questions: [],
+                isActive: true
+            };
+            
+            // Gabung sebagai host
+            joinAsHost(roomCode, { name, avatar });
+        }
+
+        // Gabung sebagai host
+        function joinAsHost(roomCode, user) {
+            const room = appData.rooms[roomCode];
+            if (!room) return;
+            
+            // Simpan data
+            appData.role = 'host';
+            appData.roomCode = roomCode;
+            appData.user = user;
+            appData.currentRoom = room;
+            
+            // Tambahkan host ke peserta
+            if (!room.participants.some(p => p.name === user.name)) {
+                room.participants.push(user);
+            }
+            
+            // Simpan ke localStorage
+            localStorage.setItem('eduQuizData', JSON.stringify({
+                role: 'host',
+                roomCode,
+                user
+            }));
+            
+            // Tampilkan lobby host
+            showCard('hostLobbyCard');
+            updateRoomDisplay();
+            
+            // Setup form pertanyaan
+            setupQuestionForms();
+        }
+
+        // Gabung room
+        function joinRoom() {
+            // Validasi input
+            const roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
+            const name = document.getElementById('participantName').value.trim();
+            const avatarElement = document.querySelector('.avatar-option.selected[data-role="participant"]');
+            
+            // Reset error messages
+            document.getElementById('roomCodeError').textContent = '';
+            document.getElementById('participantNameError').textContent = '';
+            document.getElementById('participantAvatarError').textContent = '';
+            
+            let isValid = true;
+            
+            if (!roomCode) {
+                document.getElementById('roomCodeError').textContent = 'Kode room harus diisi';
+                isValid = false;
+            } else if (!appData.rooms[roomCode]) {
+                document.getElementById('roomCodeError').textContent = 'Room tidak ditemukan';
+                isValid = false;
+            }
+            
+            if (!name) {
+                document.getElementById('participantNameError').textContent = 'Nama harus diisi';
+                isValid = false;
+            }
+            
+            if (!avatarElement) {
+                document.getElementById('participantAvatarError').textContent = 'Pilih avatar terlebih dahulu';
+                isValid = false;
+            }
+            
+            if (!isValid) return;
+            
+            const avatar = avatarElement.src;
+            const room = appData.rooms[roomCode];
+            
+            // Gabung sebagai peserta
+            joinAsParticipant(roomCode, { name, avatar });
+        }
+
+        // Gabung sebagai peserta
+        function joinAsParticipant(roomCode, user) {
+            const room = appData.rooms[roomCode];
+            if (!room) return;
+            
+            // Simpan data
+            appData.role = 'participant';
+            appData.roomCode = roomCode;
+            appData.user = user;
+            appData.currentRoom = room;
+            
+            // Tambahkan peserta ke room
+            if (!room.participants.some(p => p.name === user.name)) {
+                room.participants.push(user);
+            }
+            
+            // Simpan ke localStorage
+            localStorage.setItem('eduQuizData', JSON.stringify({
+                role: 'participant',
+                roomCode,
+                user
+            }));
+            
+            // Tampilkan lobby peserta
+            showCard('participantLobbyCard');
+            updateRoomDisplay();
+        }
+
+        // Keluar dari room
+        function exitRoom() {
+            if (appData.role === 'host') {
+                // Host keluar, hapus room
+                if (appData.roomCode && appData.rooms[appData.roomCode]) {
+                    delete appData.rooms[appData.roomCode];
+                }
+            } else if (appData.role === 'participant') {
+                // Peserta keluar, hapus dari daftar peserta
+                if (appData.roomCode && appData.rooms[appData.roomCode]) {
+                    const room = appData.rooms[appData.roomCode];
+                    room.participants = room.participants.filter(p => p.name !== appData.user.name);
+                }
+            }
+            
+            // Hapus data dari localStorage
+            localStorage.removeItem('eduQuizData');
+            
+            // Kembali ke menu utama
+            showCard('roleCard');
+        }
+
+        // Setup form pertanyaan untuk host
+        function setupQuestionForms() {
+            const container = document.getElementById('questionFormsContainer');
+            container.innerHTML = '';
+            
+            if (appData.currentRoom.questions.length === 0) {
+                addQuestionForm();
+            } else {
+                appData.currentRoom.questions.forEach((q, index) => {
+                    addQuestionForm(q, index);
+                });
+            }
+        }
+
+        // Tambah form pertanyaan baru
+        function addQuestionForm(questionData = null, index = null) {
+            const container = document.getElementById('questionFormsContainer');
+            const questionId = index !== null ? index : Date.now();
+            
+            const questionForm = document.createElement('div');
+            questionForm.className = 'question-form';
+            questionForm.dataset.id = questionId;
+            
+            questionForm.innerHTML = `
+                <div class="form-group">
+                    <label>Pertanyaan ${index !== null ? index + 1 : container.children.length + 1}</label>
+                    <textarea placeholder="Masukkan pertanyaan" class="question-input">${questionData ? questionData.question : ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Opsi Jawaban</label>
+                    <input type="text" placeholder="Opsi 1 (Jawaban Benar)" class="option-input" value="${questionData ? questionData.options[0] : ''}">
+                    <input type="text" placeholder="Opsi 2" class="option-input" value="${questionData ? questionData.options[1] : ''}">
+                    <input type="text" placeholder="Opsi 3" class="option-input" value="${questionData ? questionData.options[2] : ''}">
+                    <input type="text" placeholder="Opsi 4" class="option-input" value="${questionData ? questionData.options[3] : ''}">
+                </div>
+                <button class="btn btn-danger" onclick="removeQuestionForm(${questionId})">Hapus Pertanyaan</button>
+            `;
+            
+            container.appendChild(questionForm);
+        }
+
+        // Hapus form pertanyaan
+        function removeQuestionForm(questionId) {
+            const form = document.querySelector(`.question-form[data-id="${questionId}"]`);
+            if (form) {
+                form.remove();
+                
+                // Update nomor pertanyaan
+                const forms = document.querySelectorAll('.question-form');
+                forms.forEach((form, index) => {
+                    const label = form.querySelector('label');
+                    if (label) {
+                        label.textContent = `Pertanyaan ${index + 1}`;
+                    }
+                });
+            }
+        }
+
+        // Mulai quiz (hanya host)
+        function startQuiz() {
+            if (appData.role !== 'host') return;
+            
+            // Simpan semua pertanyaan
+            const questionForms = document.querySelectorAll('.question-form');
+            appData.currentRoom.questions = [];
+            
+            questionForms.forEach(form => {
+                const questionText = form.querySelector('.question-input').value.trim();
+                const options = Array.from(form.querySelectorAll('.option-input')).map(input => input.value.trim()).filter(opt => opt);
+                
+                if (questionText && options.length >= 2) {
+                    appData.currentRoom.questions.push({
+                        question: questionText,
+                        options: options,
+                        answer: 0 // Default jawaban benar adalah opsi pertama
+                    });
+                }
+            });
+            
+            if (appData.currentRoom.questions.length === 0) {
+                alert('Tambahkan setidaknya satu pertanyaan sebelum memulai quiz!');
+                return;
+            }
+            
+            // Mulai quiz
+            appData.quiz.questions = appData.currentRoom.questions;
+            appData.quiz.currentQuestion = 0;
+            
+            // Tampilkan layar quiz
+            showCard('quizCard');
+            document.getElementById('quizTitle').textContent = appData.currentRoom.topic;
+            loadQuestion(0);
+        }
+
+        // Tampilkan pertanyaan
+        function loadQuestion(index) {
+            if (index < 0 || index >= appData.quiz.questions.length) return;
+            
+            appData.quiz.currentQuestion = index;
+            const question = appData.quiz.questions[index];
+            
+            document.getElementById('questionText').textContent = question.question;
+            document.getElementById('questionCounter').textContent = `${index + 1}/${appData.quiz.questions.length}`;
+            
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            question.options.forEach((option, i) => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'option';
+                optionElement.textContent = option;
+                optionElement.onclick = function() {
+                    selectOption(i);
+                };
+                optionsContainer.appendChild(optionElement);
+            });
+            
+            // Update tombol navigasi
+            document.getElementById('prevQuestionBtn').classList.toggle('hidden', index === 0);
+            document.getElementById('nextQuestionBtn').classList.toggle('hidden', index === appData.quiz.questions.length - 1);
+        }
+
+        // Pilih opsi jawaban
+        function selectOption(index) {
+            const options = document.querySelectorAll('.option');
+            options.forEach(option => option.classList.remove('selected'));
+            options[index].classList.add('selected');
+            
+            // Set jawaban benar (hanya untuk host)
+            if (appData.role === 'host') {
+                appData.quiz.questions[appData.quiz.currentQuestion].answer = index;
+            }
+        }
+
+        // Pertanyaan sebelumnya
+        function prevQuestion() {
+            loadQuestion(appData.quiz.currentQuestion - 1);
+        }
+
+        // Pertanyaan berikutnya
+        function nextQuestion() {
+            loadQuestion(appData.quiz.currentQuestion + 1);
+        }
+
+        // Update tampilan room
+        function updateRoomDisplay() {
+            const room = appData.currentRoom;
+            if (!room) return;
+            
+            // Update kode room
+            document.getElementById('hostRoomCodeDisplay').textContent = room.code;
+            document.getElementById('participantRoomCodeDisplay').textContent = room.code;
+            
+            // Update topik room
+            document.getElementById('roomTopicText').textContent = room.topic;
+            document.getElementById('participantRoomTopic').textContent = room.topic;
+            
+            // Update daftar peserta
+            updateParticipantsList();
+        }
+
+        // Update daftar peserta
+        function updateParticipantsList() {
+            const room = appData.currentRoom;
+            if (!room) return;
+            
+            const hostList = document.getElementById('participantsList');
+            const participantList = document.getElementById('participantViewList');
+            
+            if (hostList) {
+                hostList.innerHTML = '<h3 style="margin-bottom: 15px;">Peserta (' + room.participants.length + ')</h3>';
+                room.participants.forEach(participant => {
+                    const participantElement = document.createElement('div');
+                    participantElement.className = 'participant';
+                    participantElement.innerHTML = `
+                        <img src="${participant.avatar}" class="participant-avatar">
+                        <span>${participant.name} ${participant.name === room.host.name ? '(Host)' : ''}</span>
+                    `;
+                    hostList.appendChild(participantElement);
+                });
+            }
+            
+            if (participantList) {
+                participantList.innerHTML = '<h3 style="margin-bottom: 15px;">Peserta (' + room.participants.length + ')</h3>';
+                room.participants.forEach(participant => {
+                    const participantElement = document.createElement('div');
+                    participantElement.className = 'participant';
+                    participantElement.innerHTML = `
+                        <img src="${participant.avatar}" class="participant-avatar">
+                        <span>${participant.name} ${participant.name === room.host.name ? '(Host)' : ''}</span>
+                    `;
+                    participantList.appendChild(participantElement);
+                });
+            }
+        }
+
+        // Generate kode room acak
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Tidak termasuk I,1,O,0 untuk menghindari kebingungan
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+    </script>
+</body>
+</html>
