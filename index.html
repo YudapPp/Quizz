@@ -13,6 +13,7 @@
             --dark: #212529;
             --success: #4cc9f0;
             --danger: #ef233c;
+            --warning: #ff9e00;
         }
 
         * {
@@ -79,6 +80,8 @@
 
         .card-body {
             padding: 30px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         .form-group {
@@ -134,6 +137,10 @@
             background: linear-gradient(to right, var(--danger), #d00000);
         }
 
+        .btn-warning {
+            background: linear-gradient(to right, var(--warning), #ff9100);
+        }
+
         .btn-block {
             display: block;
             width: 100%;
@@ -168,6 +175,13 @@
             text-align: center;
             margin: 20px 0;
             color: var(--primary);
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            display: inline-block;
+            width: auto;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .participants {
@@ -241,15 +255,58 @@
             font-size: 14px;
         }
 
+        .success-message {
+            color: var(--success);
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
         .question-form {
             margin-bottom: 20px;
             padding: 20px;
             border: 1px dashed #ccc;
             border-radius: 8px;
+            position: relative;
         }
 
         .add-question-btn {
             margin-top: 10px;
+        }
+
+        .remove-question-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .quiz-status {
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background-color: rgba(76, 201, 240, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .status-waiting {
+            background-color: rgba(255, 158, 0, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
         }
 
         @media (max-width: 768px) {
@@ -306,7 +363,7 @@
                     <div class="error-message" id="hostAvatarError"></div>
                 </div>
                 <div class="form-group">
-                    <label for="roomTopic">Topik Quiz (Opsional)</label>
+                    <label for="roomTopic">Topik Quiz</label>
                     <input type="text" id="roomTopic" placeholder="Contoh: Matematika Dasar">
                 </div>
                 <button class="btn btn-block" onclick="createRoom()">Buat Room</button>
@@ -324,7 +381,7 @@
             <div class="card-body">
                 <div class="form-group">
                     <label for="roomCode">Kode Room</label>
-                    <input type="text" id="roomCode" placeholder="Masukkan kode room" maxlength="6">
+                    <input type="text" id="roomCode" placeholder="Masukkan 6 digit kode room" maxlength="6" style="text-transform: uppercase;">
                     <div class="error-message" id="roomCodeError"></div>
                 </div>
                 <div class="form-group">
@@ -360,6 +417,10 @@
                 <p style="text-align: center;" id="hostRoomTopicDisplay">Topik: <span id="roomTopicText"></span></p>
                 <p style="text-align: center;">Bagikan kode ini ke peserta</p>
                 
+                <div class="quiz-status" id="quizStatusHost">
+                    Status: <span id="quizStatusTextHost">Menunggu peserta</span>
+                </div>
+                
                 <div class="participants" id="participantsList">
                     <!-- Daftar peserta akan muncul di sini -->
                 </div>
@@ -375,6 +436,7 @@
                 </div>
                 
                 <button class="btn btn-accent btn-block" id="startQuizBtn" onclick="startQuiz()">Mulai Quiz</button>
+                <button class="btn btn-danger btn-block" id="endQuizBtn" onclick="endQuiz()" style="margin-top: 10px; display: none;">Akhiri Quiz</button>
             </div>
         </div>
 
@@ -384,18 +446,22 @@
                 <button class="back-btn" onclick="exitRoom()">
                     <span class="material-symbols-outlined">arrow_back</span> Keluar
                 </button>
-                <h1>Menunggu Host Memulai Quiz</h1>
+                <h1 id="participantLobbyTitle">Menunggu Host Memulai Quiz</h1>
             </div>
             <div class="card-body">
                 <div class="room-code" id="participantRoomCodeDisplay">KODE</div>
                 <p style="text-align: center;">Topik: <span id="participantRoomTopic"></span></p>
+                
+                <div class="quiz-status" id="quizStatusParticipant">
+                    Status: <span id="quizStatusTextParticipant">Menunggu host memulai</span>
+                </div>
                 
                 <div class="participants" id="participantViewList">
                     <!-- Daftar peserta akan muncul di sini -->
                 </div>
                 
                 <div id="waitingMessage">
-                    <p style="text-align: center; margin-top: 20px;">Menunggu host memulai quiz...</p>
+                    <p style="text-align: center; margin-top: 20px;" id="waitingText">Menunggu host memulai quiz...</p>
                 </div>
             </div>
         </div>
@@ -403,6 +469,9 @@
         <!-- Card 6: Quiz Screen -->
         <div class="card" id="quizCard">
             <div class="card-header">
+                <button class="back-btn" onclick="backToLobby()">
+                    <span class="material-symbols-outlined">arrow_back</span> Kembali
+                </button>
                 <h1 id="quizTitle">EduQuiz</h1>
             </div>
             <div class="card-body">
@@ -440,42 +509,49 @@
             currentRoom: null,
             quiz: {
                 currentQuestion: 0,
-                questions: []
+                questions: [],
+                isActive: false
             }
         };
 
         // Inisialisasi
         document.addEventListener('DOMContentLoaded', function() {
             checkLoginStatus();
-            initializeSampleRooms(); // Untuk testing saja
+            
+            // Load saved questions if any
+            const savedQuestions = localStorage.getItem('quizQuestions');
+            if (savedQuestions) {
+                try {
+                    const questions = JSON.parse(savedQuestions);
+                    if (Array.isArray(questions) {
+                        // Only load if we're in host lobby
+                        if (document.getElementById('hostLobbyCard').classList.contains('active')) {
+                            setTimeout(() => {
+                                setupQuestionForms(questions);
+                                showSuccessMessage('Pertanyaan yang belum tersimpan telah dimuat otomatis');
+                            }, 500);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing saved questions:', e);
+                }
+            }
+            
+            // Auto-save questions every 5 seconds
+            setInterval(saveQuestionsToLocalStorage, 5000);
         });
 
-        // Untuk simulasi (bisa dihapus di production)
-        function initializeSampleRooms() {
-            appData.rooms = {
-                'ABC123': {
-                    code: 'ABC123',
-                    host: {
-                        name: 'Host Contoh',
-                        avatar: 'https://i.pravatar.cc/150?img=1'
-                    },
-                    topic: 'Matematika Dasar',
-                    participants: [],
-                    questions: [
-                        {
-                            question: "Berapa hasil dari 7 x 8?",
-                            options: ["48", "56", "64", "72"],
-                            answer: 1
-                        },
-                        {
-                            question: "Apa ibukota Indonesia?",
-                            options: ["Jakarta", "Bandung", "Surabaya", "Medan"],
-                            answer: 0
-                        }
-                    ],
-                    isActive: true
-                }
-            };
+        // Simpan pertanyaan ke localStorage
+        function saveQuestionsToLocalStorage() {
+            if (appData.role === 'host' && document.getElementById('questionFormsContainer')) {
+                const questions = getQuestionsFromForms();
+                localStorage.setItem('quizQuestions', JSON.stringify(questions));
+            }
+        }
+
+        // Clear saved questions
+        function clearSavedQuestions() {
+            localStorage.removeItem('quizQuestions');
         }
 
         // Cek status login dari localStorage
@@ -502,6 +578,22 @@
                 card.classList.remove('active');
             });
             document.getElementById(cardId).classList.add('active');
+            
+            // Scroll ke atas
+            window.scrollTo(0, 0);
+        }
+
+        // Tampilkan pesan sukses
+        function showSuccessMessage(message) {
+            const successMsg = document.createElement('div');
+            successMsg.className = 'success-message';
+            successMsg.textContent = message;
+            document.getElementById('questionSetupSection').prepend(successMsg);
+            
+            // Hilangkan setelah 3 detik
+            setTimeout(() => {
+                successMsg.remove();
+            }, 3000);
         }
 
         // Pilih avatar
@@ -521,7 +613,7 @@
             // Validasi input
             const name = document.getElementById('hostName').value.trim();
             const avatarElement = document.querySelector('.avatar-option.selected[data-role="host"]');
-            const topic = document.getElementById('roomTopic').value.trim();
+            const topic = document.getElementById('roomTopic').value.trim() || 'Quiz Edukasi';
             
             // Reset error messages
             document.getElementById('hostNameError').textContent = '';
@@ -550,10 +642,10 @@
             appData.rooms[roomCode] = {
                 code: roomCode,
                 host: { name, avatar },
-                topic: topic || 'Quiz Edukasi',
+                topic: topic,
                 participants: [],
                 questions: [],
-                isActive: true
+                isActive: false
             };
             
             // Gabung sebagai host
@@ -563,7 +655,11 @@
         // Gabung sebagai host
         function joinAsHost(roomCode, user) {
             const room = appData.rooms[roomCode];
-            if (!room) return;
+            if (!room) {
+                alert('Room tidak ditemukan');
+                showCard('roleCard');
+                return;
+            }
             
             // Simpan data
             appData.role = 'host';
@@ -588,7 +684,10 @@
             updateRoomDisplay();
             
             // Setup form pertanyaan
-            setupQuestionForms();
+            setupQuestionForms(room.questions);
+            
+            // Update status quiz
+            updateQuizStatus();
         }
 
         // Gabung room
@@ -605,11 +704,14 @@
             
             let isValid = true;
             
-            if (!roomCode) {
-                document.getElementById('roomCodeError').textContent = 'Kode room harus diisi';
+            if (!roomCode || roomCode.length !== 6) {
+                document.getElementById('roomCodeError').textContent = 'Kode room harus 6 karakter';
                 isValid = false;
             } else if (!appData.rooms[roomCode]) {
                 document.getElementById('roomCodeError').textContent = 'Room tidak ditemukan';
+                isValid = false;
+            } else if (appData.rooms[roomCode].isActive) {
+                document.getElementById('roomCodeError').textContent = 'Quiz sudah dimulai, tidak bisa bergabung sekarang';
                 isValid = false;
             }
             
@@ -635,7 +737,18 @@
         // Gabung sebagai peserta
         function joinAsParticipant(roomCode, user) {
             const room = appData.rooms[roomCode];
-            if (!room) return;
+            if (!room) {
+                alert('Room tidak ditemukan');
+                showCard('roleCard');
+                return;
+            }
+            
+            // Cek apakah quiz sudah dimulai
+            if (room.isActive) {
+                alert('Quiz sudah dimulai, tidak bisa bergabung sekarang');
+                showCard('roleCard');
+                return;
+            }
             
             // Simpan data
             appData.role = 'participant';
@@ -643,7 +756,7 @@
             appData.user = user;
             appData.currentRoom = room;
             
-            // Tambahkan peserta ke room
+            // Tambahkan peserta ke room (jika belum ada)
             if (!room.participants.some(p => p.name === user.name)) {
                 room.participants.push(user);
             }
@@ -658,42 +771,158 @@
             // Tampilkan lobby peserta
             showCard('participantLobbyCard');
             updateRoomDisplay();
+            updateQuizStatus();
         }
 
         // Keluar dari room
         function exitRoom() {
+            if (confirm('Apakah Anda yakin ingin keluar dari room?')) {
+                if (appData.role === 'host') {
+                    // Host keluar, hapus room
+                    if (appData.roomCode && appData.rooms[appData.roomCode]) {
+                        delete appData.rooms[appData.roomCode];
+                    }
+                } else if (appData.role === 'participant') {
+                    // Peserta keluar, hapus dari daftar peserta
+                    if (appData.roomCode && appData.rooms[appData.roomCode]) {
+                        const room = appData.rooms[appData.roomCode];
+                        room.participants = room.participants.filter(p => p.name !== appData.user.name);
+                    }
+                }
+                
+                // Hapus data dari localStorage
+                localStorage.removeItem('eduQuizData');
+                clearSavedQuestions();
+                
+                // Kembali ke menu utama
+                showCard('roleCard');
+            }
+        }
+
+        // Kembali ke lobby dari quiz
+        function backToLobby() {
             if (appData.role === 'host') {
-                // Host keluar, hapus room
-                if (appData.roomCode && appData.rooms[appData.roomCode]) {
-                    delete appData.rooms[appData.roomCode];
-                }
-            } else if (appData.role === 'participant') {
-                // Peserta keluar, hapus dari daftar peserta
-                if (appData.roomCode && appData.rooms[appData.roomCode]) {
-                    const room = appData.rooms[appData.roomCode];
-                    room.participants = room.participants.filter(p => p.name !== appData.user.name);
-                }
+                showCard('hostLobbyCard');
+            } else {
+                showCard('participantLobbyCard');
+            }
+        }
+
+        // Update tampilan room
+        function updateRoomDisplay() {
+            const room = appData.currentRoom;
+            if (!room) return;
+            
+            // Update kode room
+            document.getElementById('hostRoomCodeDisplay').textContent = room.code;
+            document.getElementById('participantRoomCodeDisplay').textContent = room.code;
+            
+            // Update topik room
+            document.getElementById('roomTopicText').textContent = room.topic;
+            document.getElementById('participantRoomTopic').textContent = room.topic;
+            
+            // Update daftar peserta
+            updateParticipantsList();
+        }
+
+        // Update status quiz
+        function updateQuizStatus() {
+            const room = appData.currentRoom;
+            if (!room) return;
+            
+            if (room.isActive) {
+                // Quiz aktif
+                document.getElementById('quizStatusHost').className = 'quiz-status status-active';
+                document.getElementById('quizStatusTextHost').textContent = 'Quiz sedang berlangsung';
+                document.getElementById('startQuizBtn').style.display = 'none';
+                document.getElementById('endQuizBtn').style.display = 'block';
+                
+                document.getElementById('quizStatusParticipant').className = 'quiz-status status-active';
+                document.getElementById('quizStatusTextParticipant').textContent = 'Quiz sedang berlangsung';
+                document.getElementById('participantLobbyTitle').textContent = 'Quiz Sedang Berlangsung';
+                document.getElementById('waitingText').textContent = 'Quiz sedang berlangsung...';
+            } else {
+                // Menunggu
+                document.getElementById('quizStatusHost').className = 'quiz-status status-waiting';
+                document.getElementById('quizStatusTextHost').textContent = 'Menunggu peserta';
+                document.getElementById('startQuizBtn').style.display = 'block';
+                document.getElementById('endQuizBtn').style.display = 'none';
+                
+                document.getElementById('quizStatusParticipant').className = 'quiz-status status-waiting';
+                document.getElementById('quizStatusTextParticipant').textContent = 'Menunggu host memulai';
+                document.getElementById('participantLobbyTitle').textContent = 'Menunggu Host Memulai Quiz';
+                document.getElementById('waitingText').textContent = 'Menunggu host memulai quiz...';
+            }
+        }
+
+        // Update daftar peserta
+        function updateParticipantsList() {
+            const room = appData.currentRoom;
+            if (!room) return;
+            
+            const hostList = document.getElementById('participantsList');
+            const participantList = document.getElementById('participantViewList');
+            
+            if (hostList) {
+                hostList.innerHTML = '<h3 style="margin-bottom: 15px;">Peserta (' + room.participants.length + ')</h3>';
+                room.participants.forEach(participant => {
+                    const participantElement = document.createElement('div');
+                    participantElement.className = 'participant';
+                    participantElement.innerHTML = `
+                        <img src="${participant.avatar}" class="participant-avatar">
+                        <span>${participant.name} ${participant.name === room.host.name ? '(Host)' : ''}</span>
+                    `;
+                    hostList.appendChild(participantElement);
+                });
             }
             
-            // Hapus data dari localStorage
-            localStorage.removeItem('eduQuizData');
-            
-            // Kembali ke menu utama
-            showCard('roleCard');
+            if (participantList) {
+                participantList.innerHTML = '<h3 style="margin-bottom: 15px;">Peserta (' + room.participants.length + ')</h3>';
+                room.participants.forEach(participant => {
+                    const participantElement = document.createElement('div');
+                    participantElement.className = 'participant';
+                    participantElement.innerHTML = `
+                        <img src="${participant.avatar}" class="participant-avatar">
+                        <span>${participant.name} ${participant.name === room.host.name ? '(Host)' : ''}</span>
+                    `;
+                    participantList.appendChild(participantElement);
+                });
+            }
         }
 
         // Setup form pertanyaan untuk host
-        function setupQuestionForms() {
+        function setupQuestionForms(questions = []) {
             const container = document.getElementById('questionFormsContainer');
             container.innerHTML = '';
             
-            if (appData.currentRoom.questions.length === 0) {
+            if (questions.length === 0) {
                 addQuestionForm();
             } else {
-                appData.currentRoom.questions.forEach((q, index) => {
+                questions.forEach((q, index) => {
                     addQuestionForm(q, index);
                 });
             }
+        }
+
+        // Dapatkan pertanyaan dari form
+        function getQuestionsFromForms() {
+            const questionForms = document.querySelectorAll('.question-form');
+            const questions = [];
+            
+            questionForms.forEach(form => {
+                const questionText = form.querySelector('.question-input').value.trim();
+                const options = Array.from(form.querySelectorAll('.option-input')).map(input => input.value.trim()).filter(opt => opt);
+                
+                if (questionText && options.length >= 2) {
+                    questions.push({
+                        question: questionText,
+                        options: options,
+                        answer: 0 // Default jawaban benar adalah opsi pertama
+                    });
+                }
+            });
+            
+            return questions;
         }
 
         // Tambah form pertanyaan baru
@@ -706,6 +935,9 @@
             questionForm.dataset.id = questionId;
             
             questionForm.innerHTML = `
+                <button class="remove-question-btn" onclick="removeQuestionForm(${questionId})">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
                 <div class="form-group">
                     <label>Pertanyaan ${index !== null ? index + 1 : container.children.length + 1}</label>
                     <textarea placeholder="Masukkan pertanyaan" class="question-input">${questionData ? questionData.question : ''}</textarea>
@@ -717,7 +949,6 @@
                     <input type="text" placeholder="Opsi 3" class="option-input" value="${questionData ? questionData.options[2] : ''}">
                     <input type="text" placeholder="Opsi 4" class="option-input" value="${questionData ? questionData.options[3] : ''}">
                 </div>
-                <button class="btn btn-danger" onclick="removeQuestionForm(${questionId})">Hapus Pertanyaan</button>
             `;
             
             container.appendChild(questionForm);
@@ -725,18 +956,20 @@
 
         // Hapus form pertanyaan
         function removeQuestionForm(questionId) {
-            const form = document.querySelector(`.question-form[data-id="${questionId}"]`);
-            if (form) {
-                form.remove();
-                
-                // Update nomor pertanyaan
-                const forms = document.querySelectorAll('.question-form');
-                forms.forEach((form, index) => {
-                    const label = form.querySelector('label');
-                    if (label) {
-                        label.textContent = `Pertanyaan ${index + 1}`;
-                    }
-                });
+            if (confirm('Apakah Anda yakin ingin menghapus pertanyaan ini?')) {
+                const form = document.querySelector(`.question-form[data-id="${questionId}"]`);
+                if (form) {
+                    form.remove();
+                    
+                    // Update nomor pertanyaan
+                    const forms = document.querySelectorAll('.question-form');
+                    forms.forEach((form, index) => {
+                        const label = form.querySelector('label');
+                        if (label) {
+                            label.textContent = `Pertanyaan ${index + 1}`;
+                        }
+                    });
+                }
             }
         }
 
@@ -744,36 +977,46 @@
         function startQuiz() {
             if (appData.role !== 'host') return;
             
-            // Simpan semua pertanyaan
-            const questionForms = document.querySelectorAll('.question-form');
-            appData.currentRoom.questions = [];
+            // Simpan semua pertanyaan ke room
+            const questions = getQuestionsFromForms();
             
-            questionForms.forEach(form => {
-                const questionText = form.querySelector('.question-input').value.trim();
-                const options = Array.from(form.querySelectorAll('.option-input')).map(input => input.value.trim()).filter(opt => opt);
-                
-                if (questionText && options.length >= 2) {
-                    appData.currentRoom.questions.push({
-                        question: questionText,
-                        options: options,
-                        answer: 0 // Default jawaban benar adalah opsi pertama
-                    });
-                }
-            });
-            
-            if (appData.currentRoom.questions.length === 0) {
+            if (questions.length === 0) {
                 alert('Tambahkan setidaknya satu pertanyaan sebelum memulai quiz!');
                 return;
             }
             
+            appData.currentRoom.questions = questions;
+            appData.currentRoom.isActive = true;
+            
             // Mulai quiz
-            appData.quiz.questions = appData.currentRoom.questions;
+            appData.quiz.questions = questions;
             appData.quiz.currentQuestion = 0;
+            appData.quiz.isActive = true;
+            
+            // Simpan pertanyaan ke localStorage
+            clearSavedQuestions();
+            
+            // Update status
+            updateQuizStatus();
             
             // Tampilkan layar quiz
             showCard('quizCard');
             document.getElementById('quizTitle').textContent = appData.currentRoom.topic;
             loadQuestion(0);
+        }
+
+        // Akhiri quiz (hanya host)
+        function endQuiz() {
+            if (appData.role !== 'host') return;
+            
+            if (confirm('Apakah Anda yakin ingin mengakhiri quiz?')) {
+                appData.currentRoom.isActive = false;
+                appData.quiz.isActive = false;
+                
+                // Kembali ke lobby
+                showCard('hostLobbyCard');
+                updateQuizStatus();
+            }
         }
 
         // Tampilkan pertanyaan
@@ -824,58 +1067,6 @@
         // Pertanyaan berikutnya
         function nextQuestion() {
             loadQuestion(appData.quiz.currentQuestion + 1);
-        }
-
-        // Update tampilan room
-        function updateRoomDisplay() {
-            const room = appData.currentRoom;
-            if (!room) return;
-            
-            // Update kode room
-            document.getElementById('hostRoomCodeDisplay').textContent = room.code;
-            document.getElementById('participantRoomCodeDisplay').textContent = room.code;
-            
-            // Update topik room
-            document.getElementById('roomTopicText').textContent = room.topic;
-            document.getElementById('participantRoomTopic').textContent = room.topic;
-            
-            // Update daftar peserta
-            updateParticipantsList();
-        }
-
-        // Update daftar peserta
-        function updateParticipantsList() {
-            const room = appData.currentRoom;
-            if (!room) return;
-            
-            const hostList = document.getElementById('participantsList');
-            const participantList = document.getElementById('participantViewList');
-            
-            if (hostList) {
-                hostList.innerHTML = '<h3 style="margin-bottom: 15px;">Peserta (' + room.participants.length + ')</h3>';
-                room.participants.forEach(participant => {
-                    const participantElement = document.createElement('div');
-                    participantElement.className = 'participant';
-                    participantElement.innerHTML = `
-                        <img src="${participant.avatar}" class="participant-avatar">
-                        <span>${participant.name} ${participant.name === room.host.name ? '(Host)' : ''}</span>
-                    `;
-                    hostList.appendChild(participantElement);
-                });
-            }
-            
-            if (participantList) {
-                participantList.innerHTML = '<h3 style="margin-bottom: 15px;">Peserta (' + room.participants.length + ')</h3>';
-                room.participants.forEach(participant => {
-                    const participantElement = document.createElement('div');
-                    participantElement.className = 'participant';
-                    participantElement.innerHTML = `
-                        <img src="${participant.avatar}" class="participant-avatar">
-                        <span>${participant.name} ${participant.name === room.host.name ? '(Host)' : ''}</span>
-                    `;
-                    participantList.appendChild(participantElement);
-                });
-            }
         }
 
         // Generate kode room acak
